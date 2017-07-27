@@ -2,33 +2,37 @@ var reportConfigUrl = '/bahmni_config/openmrs/apps/reports/reports.json';
 var downloadUrl = '/dhis-integration/download?name=NAME&year=YEAR&month=MONTH';
 var submitUrl = '/dhis-integration/submit-to-dhis';
 var loginRedirectUrl = '/bahmni/home/index.html#/login?showLoginMessage&from=';
-var supportedStartDate = 2090;
-var supportedEndDate = 2065;
-var approximateNepaliYear = (new Date()).getFullYear() + 56;
-
-var months = [
-    {number: 12, name: "Chaitra"},
-    {number: 11, name: "Falgun"},
-    {number: 10, name: "Mangh"},
-    {number: 9, name: "Paush"},
-    {number: 8, name: "Mangsir"},
-    {number: 7, name: "Kartik"},
-    {number: 6, name: "Ashwin"},
-    {number: 5, name: "Bhadra"},
-    {number: 4, name: "Shrawan"},
-    {number: 3, name: "Ashadh"},
-    {number: 2, name: "Jestha"},
-    {number: 1, name: "Baisakh"}
-];
-
-var years = range(supportedStartDate, supportedEndDate);
+var dhis2ConfigUrl = '/bahmni_config/openmrs/apps/dhis2/app.json';
+var years, config, months, approximateYear;
 
 $(document).ready(function () {
     isAuthenticated()
+        .then(getConfig)
+        .then(setupCalendar)
         .then(renderPrograms)
-        .then(selectApproxLatestNepaliYear)
+        .then(selectApproxLatestYear)
+        .then(registerCalendarTypeDisplay)
         .then(registerOnchangeOnComment);
 });
+
+var registerCalendarTypeDisplay = function () {
+    $('[id^="calendarType"]').html(config.calendar);
+}
+
+var getConfig = function () {
+    return $.getJSON(dhis2ConfigUrl).then(function (response) {
+        config = response.config;
+    });
+};
+
+var setupCalendar = function () {
+    var calendarUrl = "/bahmni_config/openmrs/apps/dhis2/calendars/" + config.calendar + ".json";
+    return $.getJSON(calendarUrl).then(function (response) {
+       months = response.months;
+       years = range(eval(config.endYear), config.startYear);
+       approximateYear  = eval(response.currentYear);
+    });
+}
 
 function isAuthenticated() {
     return $.get("is-logged-in").then(function(response){
@@ -46,8 +50,8 @@ function range(start, end) {
         return start - index;
     });
 }
-function selectApproxLatestNepaliYear() {
-    $('[id^="year-"]').val(approximateNepaliYear);
+function selectApproxLatestYear() {
+    $('[id^="year-"]').val(approximateYear);
 }
 
 function renderPrograms() {
